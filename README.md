@@ -40,3 +40,18 @@ This Flask web app creates a **Pixar-style character** based on your Spotify lis
 ```bash
 git clone https://github.com/yourusername/spotify-character-generator.git
 cd spotify-character-generator
+
+
+### 3. Create a .env file
+Make a file called .env in the root directory with the following:
+
+env
+Copy
+Edit
+FLASK_SECRET_KEY=your-secret-key
+SPOTIPY_CLIENT_ID=your-spotify-client-id
+SPOTIPY_CLIENT_SECRET=your-spotify-client-secret
+SPOTIPY_REDIRECT_URI=http://localhost:5000/callback
+HUGGINGFACE_TOKEN=your-huggingface-token
+SECURITY_TOKEN=your-shared-token
+IMAGE_API_URL=https://your-ngrok-tunnel-url.ngrok.io
