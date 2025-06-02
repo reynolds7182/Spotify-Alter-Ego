@@ -17,6 +17,8 @@ This Flask web app creates a **Pixar-style character** based on your Spotify lis
 - Create a Pixar-style cartoon portrait using Stable Diffusion
 - Works on CPU with secure local image server
 
+**Not Public - Spotify Developer update
+
 ---
 
 ## 🧠 Tech Stack
