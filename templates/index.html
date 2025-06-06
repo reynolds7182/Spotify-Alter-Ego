@@ -3,117 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spotify Character Generator</title>
+  <title>Spotify Character</title>
 
-  <!-- ✅ Load TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- ✅ Load Montserrat font from Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    /* ✅ Set Montserrat font and background gradient */
     body {
       font-family: 'Montserrat', sans-serif;
-      background: radial-gradient(circle at top, #002d08, #c1ffc0);
+      background: linear-gradient(180deg, #1db954 0%, #000000 100%);
     }
 
-    /* ✅ Fade-in animation for image and description */
-    .fade-in {
-      animation: fadeIn 0.8s ease-in-out forwards;
-      opacity: 0;
+    @keyframes dots {
+      0% { content: ""; }
+      33% { content: "."; }
+      66% { content: ".."; }
+      100% { content: "..."; }
     }
 
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
+    .ellipsis::after {
+      content: "";
+      display: inline-block;
+      animation: dots 1.5s steps(3, end) infinite;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center px-4 py-6 bg-black-50 text-black-800">
+<body class="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-white">
 
-  <div class="w-full max-w-md sm:max-w-xl">
-    <!-- ✅ Main title -->
-    <h1 class="text-4xl font-bold text-center text-white mb-4">🎧 Your Spotify Avatar 🎧</h1>
-
-    <!-- ✅ Subtitle -->
-    <p class="text-center text-md mb-6 text-white">Personify your spotify</p>    
-
-    <!-- ✅ Character Image Container -->
-    <div id="characterImage" class="rounded-2xl overflow-hidden shadow-xl mb-6 bg-white aspect-square flex items-center justify-center relative">
-
-      <!-- ✅ Spinner overlay shown while image is loading -->
-      <div id="spinner" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
-        <svg class="animate-spin h-10 w-10 text-pink-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-        </svg>
-        <p class="text-sm text-pink-600 font-medium">This could take a few minutes...</p>
+  <div class="max-w-3xl w-full text-center">
+    <div class="flex flex-col items-center gap-4">
+      <div class="w-52 h-52 rounded-full overflow-hidden border-4 border-black shadow-md relative">
+        <img id="avatar" src="" alt="Avatar" class="w-full h-full object-cover hidden" />
+        <div id="avatarSpinner" class="absolute inset-0 flex items-center justify-center bg-black">
+          <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+        </div>
       </div>
 
-      <!-- ✅ Image of generated character -->
-      <img id="image" src="" alt="Character portrait" class="w-full h-full object-cover hidden" />
+      <h1 id="username" class="text-4xl font-bold ellipsis">Username loading</h1>
+      <div class="text-sm text-gray-300">
+        <span id="playlists">1000</span> Public Playlists
+        <span class="mx-2">•</span>
+        <span id="followers">83</span> Followers
+        <span class="mx-2">•</span>
+        <span id="following">92</span> Following
+      </div>
     </div>
 
-    <!-- ✅ Description box -->
-    <div id="description" class="bg-white rounded-xl shadow-md p-6 text-base sm:text-lg font-medium leading-relaxed text-gray-800 fade-in">
-      Loading your inner music persona...
+    <div class="mt-10 text-left">
+      <h2 class="text-2xl font-bold mb-4">About Me</h2>
+      <p id="description" class="text-lg text-gray-100 leading-relaxed ellipsis">
+        Loading your inner music persona
+      </p>
     </div>
 
-    <!-- ✅ "Generate Again" button -->
-    <button
-      onclick="fetchCharacter()"
-      class="mt-6 w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition">
+    <button onclick="fetchCharacter()" class="mt-10 bg-white text-black font-semibold px-6 py-3 rounded-xl shadow hover:bg-gray-200 transition">
       🔄 Generate Again
     </button>
   </div>
 
-  <!-- ✅ Script section -->
   <script>
     let ellipsisInterval = null;
 
-    /**
-     * Starts animated ellipsis in the description.
-     */
     function startEllipsisAnimation(baseText) {
       const descEl = document.getElementById("description");
+      const usernameEl = document.getElementById("username");
       let dotCount = 0;
       ellipsisInterval = setInterval(() => {
-        dotCount = (dotCount + 1) % 8; // cycle from 0 to 7 dots
-        let dots = ".".repeat(dotCount) + " ".repeat(7 - dotCount);
-        descEl.textContent = baseText + " " + dots;
+        dotCount = (dotCount + 1) % 4;
+        const dots = ".".repeat(dotCount);
+        descEl.textContent = baseText + dots;
+        usernameEl.textContent = "Username loading" + dots;
       }, 300);
     }
 
-    /**
-     * Stops the animated ellipsis.
-     */
     function stopEllipsisAnimation() {
       clearInterval(ellipsisInterval);
       ellipsisInterval = null;
     }
 
-    /**
-     * Fetch character data from backend and update UI
-     */
     async function fetchCharacter() {
-      const baseLoadingText = "Tuning into your inner music persona";
+      const baseLoadingText = "Loading your inner music persona";
       const descEl = document.getElementById("description");
-      const imageElement = document.getElementById("image");
-      const spinner = document.getElementById("spinner");
+      const usernameEl = document.getElementById("username");
+      const imageElement = document.getElementById("avatar");
+      const spinner = document.getElementById("avatarSpinner");
 
-      // Reset UI state
       imageElement.classList.add("hidden");
       spinner.style.display = "flex";
       imageElement.src = "";
+
+      descEl.textContent = baseLoadingText;
+      usernameEl.textContent = "Username loading";
+      descEl.classList.add("ellipsis");
+      usernameEl.classList.add("ellipsis");
       startEllipsisAnimation(baseLoadingText);
 
-      // Fetch data
       const res = await fetch('/character');
       const data = await res.json();
 
       stopEllipsisAnimation();
+      descEl.classList.remove("ellipsis");
+      usernameEl.classList.remove("ellipsis");
 
       if (data.error) {
         descEl.textContent = "Error: " + data.error;
@@ -122,8 +115,11 @@
       }
 
       descEl.textContent = data.character_description;
+      usernameEl.textContent = data.username;
+      document.getElementById("playlists").textContent = Math.floor(Math.random() * 900 + 100);
+      document.getElementById("followers").textContent = Math.floor(Math.random() * 900 + 100);
+      document.getElementById("following").textContent = Math.floor(Math.random() * 900 + 100);
 
-      // Wait for image to load
       imageElement.onload = () => {
         spinner.style.display = "none";
         imageElement.classList.remove("hidden");
@@ -135,18 +131,8 @@
       };
 
       imageElement.src = data.image_url;
-
-      // Re-trigger fade-in animation
-      const imgContainer = document.getElementById("characterImage");
-      imgContainer.classList.remove("fade-in");
-      descEl.classList.remove("fade-in");
-      void imgContainer.offsetWidth;  // force reflow
-      void descEl.offsetWidth;
-      imgContainer.classList.add("fade-in");
-      descEl.classList.add("fade-in");
     }
 
-    // ✅ Automatically run on first load
     fetchCharacter();
   </script>
 </body>

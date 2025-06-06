@@ -12,7 +12,7 @@ import uuid
 from flask import render_template
 from dotenv import load_dotenv
 load_dotenv()
-
+import random 
 
 from huggingface_hub import login
 login(os.getenv("HUGGINGFACE_TOKEN"))
@@ -212,6 +212,74 @@ def generate_character_image(prompt, output_dir="static"):
     return output_path
 
 
+def generate_funny_username(description):
+    description = description.lower()
+
+    # Define genre-to-words mapping
+    genre_vocab = {
+        'pop': {
+            'keywords': ['pop', 'bubblegum', 'dance', 'chart', 'idol'],
+            'adjectives': ['pop', 'shiny', 'sugary', 'bubbly'],
+            'nouns': ['princess', 'idol', 'baddie', 'fan']
+        },
+        'emo': {
+            'keywords': ['emo', 'angst', 'sad', 'gloomy', 'melancholy'],
+            'adjectives': ['gloomy', 'sad', 'moody', 'emotional'],
+            'nouns': ['goblin', 'vamp', 'ghost', 'clown']
+        },
+        'grunge': {
+            'keywords': ['grunge', 'garage', 'distorted', 'sludge', 'punk'],
+            'adjectives': ['grunge', 'noisy', 'fuzzy', 'gritty'],
+            'nouns': ['rat', 'ghoul', 'gremlin', 'sludge']
+        },
+        'hyperpop': {
+            'keywords': ['hyperpop', 'glitch', 'neon', 'chaotic', 'speedcore'],
+            'adjectives': ['hyper', 'glitchy', 'neon', 'cracked'],
+            'nouns': ['sprite', 'bot', 'idol', 'babe']
+        },
+        'ethereal': {
+            'keywords': ['dreamy', 'ethereal', 'angelic', 'celestial', 'soft'],
+            'adjectives': ['ethereal', 'angelic', 'dreamy', 'glowy'],
+            'nouns': ['angel', 'nymph', 'cloud', 'star']
+        },
+        'darkwave': {
+            'keywords': ['dark', 'goth', 'vampire', 'haunt', 'drain'],
+            'adjectives': ['dark', 'vampy', 'toxic', 'shadow'],
+            'nouns': ['vamp', 'demon', 'witch', 'fang']
+        }
+    }
+
+    # Default fallbacks
+    fallback_adjectives = ['weird', 'sassy', 'alt', 'cosmic']
+    fallback_nouns = ['queen', 'bot', 'clone', 'icon']
+
+    # Detect which genre the description leans toward
+    for genre in genre_vocab.values():
+        if any(word in description for word in genre['keywords']):
+            adj = random.choice(genre['adjectives'])
+            noun = random.choice(genre['nouns'])
+            break
+    else:
+        # Fallback random if no genre match
+        adj = random.choice(fallback_adjectives)
+        noun = random.choice(fallback_nouns)
+
+    # Build username options
+    options = [
+        f"{adj}{noun}",
+        f"{adj}_{noun}",
+        f"{adj}{noun}{random.randint(0, 99)}",
+        f"{adj}{noun[:4]}"
+    ]
+
+    for option in options:
+        if 12 <= len(option) <= 16:
+            return option
+    return (adj + noun)[:16]
+
+
+
+
 @app.route('/character')
 def character():
     if not sp:
@@ -228,13 +296,15 @@ def character():
         # 💡 Apply consistent visual style here
         formatted_prompt = format_image_prompt(image_prompt)
         image_path = generate_character_image(formatted_prompt)
+        username = generate_funny_username(character_description)
 
         return jsonify({
             "ollama_prompt": ollama_prompt,
             "character_description": character_description,
             "image_prompt": image_prompt,
             "formatted_prompt": formatted_prompt,
-            "image_url": url_for('static', filename=os.path.basename(image_path))
+            "image_url": url_for('static', filename=os.path.basename(image_path)),
+            "username": username
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

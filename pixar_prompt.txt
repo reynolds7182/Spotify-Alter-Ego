@@ -52,3 +52,4 @@ Recent Tracks:
 {{RECENT_TRACKS}}
 
 Now write the character description and image prompt using the format above.
+
