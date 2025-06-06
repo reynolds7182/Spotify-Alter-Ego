@@ -1,4 +1,4 @@
-# 🎧 Spotify Character Generator
+# 🎭 Spotify Alter Ego
 
 This Flask web app creates a **Pixar-style character** based on your Spotify listening history using:
 
