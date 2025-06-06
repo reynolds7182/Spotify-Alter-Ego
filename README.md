@@ -62,8 +62,10 @@ HUGGINGFACE_TOKEN=your_huggingface_token
 ollama run llama3
 ```
 4. Open your browser to http://localhost:5000/ui
+5. 
+---
+## 🔑 How to Get Spotify API Keys
 
-🔑 How to Get Spotify API Keys
 1. To use the Spotify API, you’ll need to register your own app and get credentials:
 
 2. Go to the Spotify Developer Dashboard.
@@ -80,7 +82,8 @@ http://localhost:5000/callback
 ```
 7. Save settings and add keys to .env file.
 
-🤖 Credits
+---
+## 🤖 Credits
 Spotify Web API
 
 Ollama
