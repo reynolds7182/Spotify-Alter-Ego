@@ -40,3 +40,12 @@ This Flask web app creates a **Pixar-style character** based on your Spotify lis
 ### 1. Clone the repository
 
 ```bash
+git clone https://github.com/your-username/spotify-avatar-generator.git
+cd spotify-avatar-generator
+python -m venv venv
+source venv/bin/activate  # or venv\\Scripts\\activate on Windows
+pip install -r requirements.txt
+```
+
+## 🛠️ Setup
+Create a .env file in the root directory:
