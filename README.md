@@ -47,5 +47,46 @@ source venv/bin/activate  # or venv\\Scripts\\activate on Windows
 pip install -r requirements.txt
 ```
 
-## 🛠️ Setup
-Create a .env file in the root directory:
+
+2. Create a .env file in the root directory:
+```bash
+SPOTIPY_CLIENT_ID=your_spotify_client_id
+SPOTIPY_CLIENT_SECRET=your_spotify_client_secret
+SPOTIPY_REDIRECT_URI=http://localhost:5000/callback
+FLASK_SECRET_KEY=some_random_string
+HUGGINGFACE_TOKEN=your_huggingface_token
+```
+
+3. Make sure you're logged in to Ollama and have the llama3 model installed:
+```bash
+ollama run llama3
+```
+4. Open your browser to http://localhost:5000/ui
+
+🔑 How to Get Spotify API Keys
+1. To use the Spotify API, you’ll need to register your own app and get credentials:
+
+2. Go to the Spotify Developer Dashboard.
+
+3. Log in and click "Create an App".
+
+4. Give it a name and description (anything is fine).
+
+5. Once created, you'll see your Client ID and Client Secret — copy these into your .env file.
+
+6. Click "Edit Settings" and add your Redirect URI:
+```bash
+http://localhost:5000/callback
+```
+7. Save settings and add keys to .env file.
+
+🤖 Credits
+Spotify Web API
+
+Ollama
+
+Diffusers + DreamShaper LoRA
+
+Inspired by Pixar, memes, and late-night energy ⚡
+
+ChatGPT 
