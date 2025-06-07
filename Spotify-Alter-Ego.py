@@ -1,50 +1,49 @@
 import os
 import base64
 import subprocess
-from flask import Flask, request, redirect, session, url_for, jsonify
+import re
+import torch
+import uuid
+import random
+
+from flask import Flask, request, redirect, session, url_for, jsonify, render_template
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy.cache_handler import FlaskSessionCacheHandler
-import re
-import torch
-from diffusers import StableDiffusionPipeline 
-import uuid
-from flask import render_template
 from dotenv import load_dotenv
-load_dotenv()
-import random 
-
+from diffusers import StableDiffusionPipeline
 from huggingface_hub import login
+
+# Load environment variables
+load_dotenv()
+
+# Authenticate HuggingFace (for diffusers)
 login(os.getenv("HUGGINGFACE_TOKEN"))
 
+# Flask app setup
 app = Flask(__name__)
-
 app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY")
 
+# Spotify OAuth setup
 client_id = os.getenv("SPOTIPY_CLIENT_ID")
 client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
 redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
 SCOPE = 'user-top-read user-read-recently-played'
 
-login(os.getenv("HUGGINGFACE_TOKEN"))
-
-# Initialize globals
+# Globals
 sp = None
 sp_oauth = None
 cache_handler = None
 
-# Load Stable Diffusion + LoRA model once at startup
+# Load Stable Diffusion model
+print("Detecting device...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
-
-
-from diffusers import StableDiffusionPipeline  
 
 pipe = StableDiffusionPipeline.from_pretrained(
     "Lykon/dreamshaper-8",
     torch_dtype=torch.float16 if device == "cuda" else torch.float32
 )
-
 pipe.to(device)
 pipe.enable_attention_slicing()
 if device == "cuda":
@@ -52,7 +51,7 @@ if device == "cuda":
 elif device == "mps":
     pipe.enable_vae_slicing()
 
-
+# Spotify OAuth handling
 @app.before_request
 def before_request():
     global sp, sp_oauth, cache_handler
@@ -74,8 +73,7 @@ def before_request():
     else:
         sp = None
 
-
-
+# Home route
 @app.route('/')
 def home():
     if not sp:
@@ -91,10 +89,12 @@ def home():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Shows the Spotify-style UI with image/description generation
 @app.route('/ui')
 def ui():
     return render_template('index.html')
 
+# callback for errors
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
@@ -105,6 +105,7 @@ def callback():
         return jsonify({'error': 'Could not get token'}), 400
     return redirect(url_for('home'))
 
+# Spotify API functions
 def get_top_tracks_data():
     if not sp:
         raise Exception("Spotify client not initialized")
@@ -155,154 +156,92 @@ def get_recent_tracks_data():
                 break
     return unique_tracks
 
+# Ollama + prompt functions
 def call_ollama(prompt):
     """Call Ollama CLI to get a generated character description from the prompt."""
     model_name = "llama3"
-    result = subprocess.run(
-        ["ollama", "run", model_name],
-        input=prompt,
-        text=True,
-        capture_output=True
-    )
+    result = subprocess.run([
+        "ollama", "run", model_name
+    ], input=prompt, text=True, capture_output=True)
     if result.returncode != 0:
         raise Exception(f"Error calling Ollama: {result.stderr}")
     return result.stdout.strip()
 
-
 def parse_ollama_response(response):
-    import re
     description = ""
     image_prompt = ""
-
     desc_match = re.search(r"### DESCRIPTION\s*(.+?)\s*### IMAGE", response, re.DOTALL | re.IGNORECASE)
     image_match = re.search(r"### IMAGE\s*(.+)", response, re.DOTALL | re.IGNORECASE)
-
     if desc_match:
         description = desc_match.group(1).strip()
     if image_match:
         image_prompt = image_match.group(1).strip()
-
     return description, image_prompt
-
 
 def build_prompt(top_tracks, recent_tracks):
     with open("spotify_prompt.txt", "r") as f:
         template = f.read()
-
     top_str = '\n'.join(f"- '{t['name']}' by {', '.join(t['artists'])}" for t in top_tracks)
     recent_str = '\n'.join(f"- '{t['name']}' by {', '.join(t['artists'])}" for t in recent_tracks)
-
     prompt = template.replace("{{TOP_TRACKS}}", top_str)
     prompt = prompt.replace("{{RECENT_TRACKS}}", recent_str)
-
     return prompt
-
 
 def format_image_prompt(image_prompt):
     return (
-        "Pixar-style 3D character portrait. Bust shot, centered face, expressive cartoon features, big eyes, cinematic lighting. " +
-        image_prompt
+        "Pixar-style 3D character portrait. Bust shot, centered face, expressive cartoon features, big eyes, cinematic lighting. "
+        + image_prompt
     )
 
-
 def generate_character_image(prompt, output_dir="static"):
-    """Generate a Pixar-style cartoon image from the prompt using Stable Diffusion with LoRA."""
     image = pipe(prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
-
     os.makedirs(output_dir, exist_ok=True)
     filename = f"{uuid.uuid4()}.png"
     output_path = os.path.join(output_dir, filename)
     image.save(output_path)
-
     return output_path
 
-
+# Username generator
 def generate_funny_username(description):
     description = description.lower()
-
-    # Define genre-to-words mapping
     genre_vocab = {
-        'pop': {
-            'keywords': ['pop', 'bubblegum', 'dance', 'chart', 'idol'],
-            'adjectives': ['pop', 'shiny', 'sugary', 'bubbly'],
-            'nouns': ['princess', 'idol', 'baddie', 'fan']
-        },
-        'emo': {
-            'keywords': ['emo', 'angst', 'sad', 'gloomy', 'melancholy'],
-            'adjectives': ['gloomy', 'sad', 'moody', 'emotional'],
-            'nouns': ['goblin', 'vamp', 'ghost', 'clown']
-        },
-        'grunge': {
-            'keywords': ['grunge', 'garage', 'distorted', 'sludge', 'punk'],
-            'adjectives': ['grunge', 'noisy', 'fuzzy', 'gritty'],
-            'nouns': ['rat', 'ghoul', 'gremlin', 'sludge']
-        },
-        'hyperpop': {
-            'keywords': ['hyperpop', 'glitch', 'neon', 'chaotic', 'speedcore'],
-            'adjectives': ['hyper', 'glitchy', 'neon', 'cracked'],
-            'nouns': ['sprite', 'bot', 'idol', 'babe']
-        },
-        'ethereal': {
-            'keywords': ['dreamy', 'ethereal', 'angelic', 'celestial', 'soft'],
-            'adjectives': ['ethereal', 'angelic', 'dreamy', 'glowy'],
-            'nouns': ['angel', 'nymph', 'cloud', 'star']
-        },
-        'darkwave': {
-            'keywords': ['dark', 'goth', 'vampire', 'haunt', 'drain'],
-            'adjectives': ['dark', 'vampy', 'toxic', 'shadow'],
-            'nouns': ['vamp', 'demon', 'witch', 'fang']
-        }
+        'pop': { 'keywords': ['pop', 'bubblegum'], 'adjectives': ['pop', 'shiny'], 'nouns': ['princess', 'idol'] },
+        'emo': { 'keywords': ['emo', 'gloomy'], 'adjectives': ['sad', 'moody'], 'nouns': ['ghost', 'vamp'] },
+        'grunge': { 'keywords': ['grunge', 'punk'], 'adjectives': ['gritty', 'fuzzy'], 'nouns': ['rat', 'gremlin'] },
+        'hyperpop': { 'keywords': ['hyperpop'], 'adjectives': ['glitchy'], 'nouns': ['bot', 'sprite'] },
+        'ethereal': { 'keywords': ['dreamy'], 'adjectives': ['ethereal'], 'nouns': ['angel'] },
+        'darkwave': { 'keywords': ['goth', 'vampire'], 'adjectives': ['dark'], 'nouns': ['demon', 'fang'] }
     }
-
-    # Default fallbacks
-    fallback_adjectives = ['weird', 'sassy', 'alt', 'cosmic']
-    fallback_nouns = ['queen', 'bot', 'clone', 'icon']
-
-    # Detect which genre the description leans toward
+    fallback_adjectives = ['weird', 'alt']
+    fallback_nouns = ['bot', 'icon']
     for genre in genre_vocab.values():
         if any(word in description for word in genre['keywords']):
             adj = random.choice(genre['adjectives'])
             noun = random.choice(genre['nouns'])
             break
     else:
-        # Fallback random if no genre match
         adj = random.choice(fallback_adjectives)
         noun = random.choice(fallback_nouns)
-
-    # Build username options
-    options = [
-        f"{adj}{noun}",
-        f"{adj}_{noun}",
-        f"{adj}{noun}{random.randint(0, 99)}",
-        f"{adj}{noun[:4]}"
-    ]
-
+    options = [f"{adj}{noun}", f"{adj}_{noun}", f"{adj}{noun}{random.randint(0, 99)}"]
     for option in options:
         if 12 <= len(option) <= 16:
             return option
     return (adj + noun)[:16]
 
-
-
-
+# Main character generation route
 @app.route('/character')
 def character():
     if not sp:
         return redirect(sp_oauth.get_authorize_url())
-
     try:
         top_tracks = get_top_tracks_data()
         recent_tracks = get_recent_tracks_data()
-
         ollama_prompt = build_prompt(top_tracks, recent_tracks)
         ollama_response = call_ollama(ollama_prompt)
         character_description, image_prompt = parse_ollama_response(ollama_response)
-
-        # 💡 Apply consistent visual style here
         formatted_prompt = format_image_prompt(image_prompt)
         image_path = generate_character_image(formatted_prompt)
         username = generate_funny_username(character_description)
-
         return jsonify({
             "ollama_prompt": ollama_prompt,
             "character_description": character_description,
@@ -314,12 +253,10 @@ def character():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/recent-tracks')
 def recent_tracks_only():
     if not sp:
         return redirect(sp_oauth.get_authorize_url())
-
     try:
         data = get_recent_tracks_data()
         return jsonify({'recent_tracks': data})
@@ -330,7 +267,6 @@ def recent_tracks_only():
 def user_info():
     if not sp:
         return redirect(sp_oauth.get_authorize_url())
-
     try:
         user = sp.current_user()
         user_data = {
