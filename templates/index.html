@@ -115,7 +115,7 @@
       }
 
       descEl.textContent = data.character_description;
-      usernameEl.textContent = data.username;
+      usernameEl.textContent = "@" + data.username;
       document.getElementById("playlists").textContent = Math.floor(Math.random() * 900 + 100);
       document.getElementById("followers").textContent = Math.floor(Math.random() * 900 + 100);
       document.getElementById("following").textContent = Math.floor(Math.random() * 900 + 100);

@@ -7,7 +7,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from spotipy.cache_handler import FlaskSessionCacheHandler
 import re
 import torch
-from diffusers import StableDiffusionPipeline  # Make sure this is at the top
+from diffusers import StableDiffusionPipeline 
 import uuid
 from flask import render_template
 from dotenv import load_dotenv
@@ -65,11 +65,16 @@ def before_request():
         cache_handler=cache_handler,
         show_dialog=False
     )
+
     token_info = cache_handler.get_cached_token()
     if token_info:
+        if sp_oauth.is_token_expired(token_info):
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
         sp = Spotify(auth=token_info['access_token'])
     else:
         sp = None
+
+
 
 @app.route('/')
 def home():
